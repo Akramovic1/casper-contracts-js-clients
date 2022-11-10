@@ -3,8 +3,9 @@
   "description": "casper-contracts-js-clients",
   "private": true,
   "devDependencies": {
+    "@types/node": "^18.11.9",
     "dotenv": "^10.0.0",
-    "lerna": "^4.0.0",
+    "lerna": "^6.0.3",
     "typescript": "^4.4.3"
   },
   "scripts": {
@@ -14,6 +15,7 @@
     "publish:ci": "lerna publish from-package --yes --no-verify-access",
     "e2e:cep47:install": "ts-node ./e2e/cep47/install.ts",
     "e2e:cep47:usage": "ts-node ./e2e/cep47/usage.ts",
+    "e2e:cep47:test": "ts-node ./e2e/cep47/test.ts",
     "e2e:erc20:install": "ts-node ./e2e/erc20/install.ts",
     "e2e:erc20:installed": "ts-node ./e2e/erc20/installed.ts"
   },
@@ -21,10 +23,12 @@
   "author": "Jan Hoffmann <jan@casperlabs.io>",
   "license": "ISC",
   "dependencies": {
-    "casper-js-sdk": "2.9.1",
-    "ts-node": "^10.2.1",
-    "casper-js-client-helper": "file:./packages/client-helper",
+    "buffer": "^6.0.3",
     "casper-cep47-js-client": "file:./packages/cep47-client",
-    "casper-erc20-js-client": "file:./packages/erc20-client"
+    "casper-erc20-js-client": "file:./packages/erc20-client",
+    "casper-js-client-helper": "file:./packages/client-helper",
+    "casper-js-sdk": "2.9.1",
+    "node-fetch": "^3.2.10",
+    "ts-node": "^10.2.1"
   }
 }

@@ -119,18 +119,12 @@ const test = async () => {
 
   const metas = [new Map()];
 
-  metas[0].set('title', "Ahmed's Token");
-  metas[0].set('description', "Test description");
-  metas[0].set('image',"https://test.com/image.png");
+  metas[0].set('title', "AHHOTEP");
+  metas[0].set('description', "Attack card");
+  metas[0].set('image',"https://bafybeigsmmznaoaos7ucjoxkfp3rm6ozznftqaeqmc4dowe5c2r7ku2xme.ipfs.dweb.link/Cards/Attack/AHHOTEP/1.png");
   metas[0].set('price', "100");
   metas[0].set('isForSale', "true");
   metas[0].set('currency', "USD");
-  metas[0].set('campaign', "Test campaign");
-  metas[0].set('creator', "Test creator");
-  metas[0].set('creatorPercentage', "10");
-  metas[0].set('collectionName', "Test collection name");
-  metas[0].set('beneficiary', "Test beneficiary");
-  metas[0].set('beneficiaryPercentage', "10");
   console.log(metas);
 
   console.log('\n*************************\n');
@@ -139,7 +133,7 @@ const test = async () => {
 
   const mintDeploy = await cep47.mint(
     KEYS.publicKey,
-    ["1"],
+    ["10"],
     metas,
     MINT_ONE_PAYMENT_AMOUNT!,
     KEYS.publicKey,
