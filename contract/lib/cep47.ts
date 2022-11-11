@@ -31,8 +31,29 @@ import {
   getNFTImage,
   isValidHttpUrl,
 } from '../utils/contract-utils';
-
-const { NODE_ADDRESS, CHAIN_NAME, CONTRACT_NAME } = CONNECTION;
+const {
+  NODE_ADDRESS,
+  EVENT_STREAM_ADDRESS,
+  CHAIN_NAME,
+  WASM_PATH,
+  MASTER_KEY_PAIR_PATH,
+  USER_KEY_PAIR_PATH,
+  TOKEN_NAME,
+  CONTRACT_NAME,
+  TOKEN_SYMBOL,
+  CONTRACT_HASH,
+  INSTALL_PAYMENT_AMOUNT,
+  MINT_ONE_PAYMENT_AMOUNT,
+  MINT_COPIES_PAYMENT_AMOUNT,
+  TRANSFER_ONE_PAYMENT_AMOUNT,
+  BURN_ONE_PAYMENT_AMOUNT,
+  MINT_ONE_META_SIZE,
+  MINT_COPIES_META_SIZE,
+  MINT_COPIES_COUNT,
+  MINT_MANY_META_SIZE,
+  MINT_MANY_META_COUNT,
+} = process.env;
+// const { NODE_ADDRESS, CHAIN_NAME, CONTRACT_NAME } = CONNECTION;
 
 const Buffer = BufferImported.Buffer;
 const { Contract, toCLMap, fromCLMap } = Contracts;
@@ -113,16 +134,21 @@ const keyAndValueToHex = (key: CLValue, value: CLValue) => {
 
   return hex;
 };
-class CEP47Client {
+export class CEP47Client {
   casperClient: CasperClient;
   contractClient: Contracts.Contract;
   networkName: string;
   isContractIHashSetup = false;
 
+  // constructor(public nodeAddress: string, public networkName: string) {
+  //   this.casperClient = new CasperClient(nodeAddress);
+  //   this.contractClient = new Contract(this.casperClient);
+  // }
+
   constructor() {
     this.casperClient = new CasperClient(NODE_ADDRESS!);
     this.contractClient = new Contract(this.casperClient);
-    this.networkName = CHAIN_NAME;
+    this.networkName = 'casper-test';
     this.contractClient.setContractHash(
       `hash-${NFT_CONTRACT_HASH as string}`,
       `hash-${NFT_PACKAGE_HASH}`

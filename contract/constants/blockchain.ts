@@ -6,11 +6,11 @@ export const NODE_RPC_ADDRESS =
 
 export const USER_KEY_PAIR_PATH =
   process.env.REACT_APP_USER_KEY_PAIR_PATH ||
-  'D:/Ibrahim/github-projects/New folder/casperNFT_marketplace/deploy-scripts/keys/';
+  '../../keys';
 
 export const DEPLOYER_ACC =
   process.env.REACT_APP_CASPER_PUBLIC_KEY ||
-  '01fb6e663984ffaca91dbf3725e8d688659c66d5bf45d0cb2705cba04908d3b6b9';
+  '012e37ffd943f25cf1fa6f0fbb3bdca845cbc468b08a34f3d5752ae03ef5dd07a1';
 
 export const TREASURY_WALLET =
   process.env.REACT_APP_CASPER_TREASURY ||
@@ -24,10 +24,10 @@ export const CONNECTION = {
 
   CONTRACT_HASH:
     process.env.REACT_APP_NFT_CONTRACT_HASH ||
-    'hash-F07A8Ac158952854c02A1648C4c9c0A5F696B8ce58C1A2E79c946B743208CB24',
+    'hash-a6ed915e065d63171415208a1d6d356edaf90dfd4b125a6c2907d80f15c82a41',
   CONTRACT_PACKAGE_HASH:
     process.env.REACT_APP_NFT_CONTRACT_PACKAGE_HASH ||
-    'hash-69e7aD87Be061b1dD044a71404090cDbCD42aE456Cc3f7Db48ca983aA071D229',
+    'hash-583e3b85bf040c61b43471de96591303e5eb8e1e54d9f984abbdaabfe688e446',
 };
 
 export const KEYS = {

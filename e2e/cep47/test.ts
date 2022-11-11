@@ -1,206 +1,131 @@
-import { CLPublicKey } from 'casper-js-sdk';
+import { config } from "dotenv";
+config({ path: ".env.cep47" });
+import { CEP47Client, CEP47Events, CEP47EventParser } from "casper-cep47-js-client";
+import { HexToCLPublicKey } from '../../contract/utils/contract-utils';
 
-import { cep47 } from '../../contract/lib/cep47';
-import { getRandomNumberBetween } from '../../contract/utils/calculations';
-import { PAYMENT_AMOUNTS } from '../../contract/constants/paymentAmounts';
-import { getDeployDetails } from '../../contract/api/universal';
-import { getBeneficiariesList } from '../../contract/api/beneficiaryInfo';
-import { getCampaignsList } from '../../contract/api/campaignInfo';
-import { getCreatorsList } from '../../contract/api/creatorInfo';
-import { getCollectionsList } from '../../contract/api/collectionInfo';
-import { signDeploy } from '../../contract/utils/signer';
-import { CONNECTION } from '../../contract/constants/blockchain';
+// import { CEP47Client} from "../../contract/lib/cep47"
+import { parseTokenMeta, sleep, getDeploy, getAccountInfo, getAccountNamedKeyValue } from "../utils";
+import {
+  CLValueBuilder,
+  Keys,
+  CLPublicKey,
+  CLAccountHash,
+  CLPublicKeyType,
+  DeployUtil,
+  EventStream,
+  EventName,
+  CLValueParsers,
+  CLMap,
+} from "casper-js-sdk";
 
-export async function isIdOccupied(id: string): Promise<boolean> {
-  id = String(Number(id));
-  let owner;
-  try {
-    owner = await cep47.getOwnerOf(id);
-    if (owner) {
-      // console.log("owner of", id, "is", owner);
-      // console.log("ID ", id, "is occupied");
-      return true;
+import { parseNFT } from '../../contract/utils/parsers';
+
+const {
+  NODE_ADDRESS,
+  EVENT_STREAM_ADDRESS,
+  CHAIN_NAME,
+  WASM_PATH,
+  MASTER_KEY_PAIR_PATH,
+  USER_KEY_PAIR_PATH,
+  TOKEN_NAME,
+  CONTRACT_NAME,
+  TOKEN_SYMBOL,
+  CONTRACT_HASH,
+  INSTALL_PAYMENT_AMOUNT,
+  MINT_ONE_PAYMENT_AMOUNT,
+  MINT_COPIES_PAYMENT_AMOUNT,
+  TRANSFER_ONE_PAYMENT_AMOUNT,
+  BURN_ONE_PAYMENT_AMOUNT,
+  MINT_ONE_META_SIZE,
+  MINT_COPIES_META_SIZE,
+  MINT_COPIES_COUNT,
+  MINT_MANY_META_SIZE,
+  MINT_MANY_META_COUNT,
+} = process.env;
+
+const KEYS = Keys.Ed25519.parseKeyFiles(
+  `${MASTER_KEY_PAIR_PATH}/public_key.pem`,
+  `${MASTER_KEY_PAIR_PATH}/secret_key.pem`
+);
+
+const KEYS_USER = Keys.Ed25519.parseKeyFiles(
+  `${USER_KEY_PAIR_PATH}/public_key.pem`,
+  `${USER_KEY_PAIR_PATH}/secret_key.pem`
+);
+
+const test = async () => {
+  const cep47 = new CEP47Client(
+    NODE_ADDRESS!,
+    CHAIN_NAME!
+  );
+
+  let accountInfo = await getAccountInfo(NODE_ADDRESS!, KEYS.publicKey);
+
+  console.log(`... Account Info: `);
+  console.log(JSON.stringify(accountInfo, null, 2));
+
+  const contractHash = await getAccountNamedKeyValue(
+    accountInfo,
+    `${CONTRACT_NAME!}_contract_hash`
+  );
+
+  const contractPackageHash = await getAccountNamedKeyValue(
+    accountInfo,
+    `contract_package_hash`
+  );
+
+  console.log(`... Contract Hash: ${contractHash}`);
+  console.log(`... Contract Package Hash: ${contractPackageHash}`);
+
+  await cep47.setContractHash(contractHash, contractPackageHash);
+
+  await sleep(5 * 1000);
+
+  const es = new EventStream(EVENT_STREAM_ADDRESS!);
+
+  es.subscribe(EventName.DeployProcessed, (event) => {
+    const parsedEvents = CEP47EventParser({
+      contractPackageHash, 
+      eventNames: [
+        CEP47Events.MintOne,
+        CEP47Events.TransferToken,
+        CEP47Events.BurnOne,
+        CEP47Events.MetadataUpdate,
+        CEP47Events.ApproveToken
+      ]
+    }, event);
+
+    if (parsedEvents && parsedEvents.success) {
+      console.log("*** EVENT ***");
+      console.log(parsedEvents.data);
+      console.log("*** ***");
     }
-  } catch (err) {
-    // console.log("ID ", id, "is unoccupied");
-    return false;
-  }
-  return owner ? true : false;
-}
+  });
 
-export async function generateUniqueID(): Promise<number> {
-  let randID: number;
-  do {
-    randID = getRandomNumberBetween(1, 999999);
-  } while (await isIdOccupied(String(randID)));
-  console.log('Generated random unoccupied ID:', randID);
-  console.log(await isIdOccupied(String(randID)));
-  return randID;
-}
+  es.start();
 
-export async function getNFTDetails(tokenId: string) {
-  // console.log(tokenId);
+  const name = await cep47.name();
+  console.log(`... Contract name: ${name}`);
 
-  const nft_metadata = await cep47.getMappedTokenMeta(tokenId);
-  console.log(`NFT ${tokenId} metadata: `, nft_metadata);
-  return nft_metadata;
-}
+  const symbol = await cep47.symbol();
+  console.log(`... Contract symbol: ${symbol}`);
 
-export async function getNFTsList() {
-  const nftsCount: any = await cep47.totalSupply();
-  // console.log(parseInt(nftsCount));
+  const meta = await cep47.meta();
+  console.log(`... Contract meta: ${JSON.stringify(meta)}`);
 
-  const nftsList: any = [];
-  for (let tokenId of [...(Array(parseInt(nftsCount)).keys() as any)]) {
-    tokenId = tokenId + 1;
+  let totalSupply = await cep47.totalSupply();
+  console.log(`... Total supply: ${totalSupply}`);
 
-    const nft_metadata = await cep47.getMappedTokenMeta(tokenId.toString());
-    const ownerAddress = await cep47.getOwnerOf(tokenId.toString());
 
-    // const isCreatorOwner = nft_metadata.creator.includes('Key')
-    //   ? ownerAddress.slice(13) ===
-    //     nft_metadata.creator.slice(10).replace(')', '')
-    //   : ownerAddress === nft_metadata.creator;
+  //****************//
+  //* Test Section *//
+  //****************//
 
-    const isCreatorOwner =
-      nft_metadata.creator.includes('Key') ||
-      nft_metadata.creator.includes('Account')
-        ? nft_metadata.creator.includes('Account')
-          ? nft_metadata.creator.slice(13).replace(')', '') ===
-            ownerAddress.slice(13)
-          : nft_metadata.creator.slice(10).replace(')', '') ===
-            ownerAddress.slice(13)
-        : ownerAddress.slice(13) === nft_metadata.creator;
+  const pk = CLPublicKey.fromHex('012e37ffd943f25cf1fa6f0fbb3bdca845cbc468b08a34f3d5752ae03ef5dd07a1')
 
-    nft_metadata.creator =
-      nft_metadata.creator.includes('Account') ||
-      nft_metadata.creator.includes('Key')
-        ? nft_metadata.creator.includes('Account')
-          ? nft_metadata.creator.slice(13).replace(')', '')
-          : nft_metadata.creator.slice(10).replace(')', '')
-        : nft_metadata.creator;
-        nft_metadata["sdgs"]=["19"]
-    nftsList.push({ ...nft_metadata, isCreatorOwner, tokenId });
-  }
+  console.log(await cep47.getTokenByIndex(pk,'0'))
 
-  return nftsList;
-}
 
-export async function getCreatorNftList(address: string) {
-  const creator = CLPublicKey.fromHex(address).toAccountHashStr();
+};
 
-  const nftList = await getNFTsList();
-
-  for (const [index, nft] of nftList.entries()) {
-    const owner = await cep47.getOwnerOf(nft.tokenId.toString());
-    nftList[index].isOwner = owner === creator;
-  }
-
-  const creatorList = nftList.filter(
-    (nft: any) =>
-      creator.includes('hash')
-        ? nft.creator === creator.slice(13)
-        : nft.creator === address
-
-    // && nft.isOwner
-  );
-
-  return creatorList || [];
-}
-
-export async function setIsTokenForSale(
-  isForSale: Boolean,
-  tokenId: string,
-  deploySender: CLPublicKey,
-  price?: string
-) {
-  const nftDetails = await cep47.getMappedTokenMeta(tokenId, true);
-  nftDetails['isForSale'] = isForSale.toString();
-  isForSale && (nftDetails['price'] = price);
-
-  const mappedNft = new Map(Object.entries(nftDetails));
-  const updatedNftDeploy = await cep47.updateTokenMeta(
-    tokenId,
-    mappedNft,
-    PAYMENT_AMOUNTS.MINT_ONE_PAYMENT_AMOUNT,
-    deploySender
-  );
-
-  const signedUpdatedNftDeploy = await signDeploy(
-    updatedNftDeploy,
-    deploySender
-  );
-  console.log('Signed Updated NFT deploy:', signedUpdatedNftDeploy);
-
-  const updatedNftDeployHash = await signedUpdatedNftDeploy.send(
-    CONNECTION.NODE_ADDRESS
-  );
-  console.log('Deploy hash', updatedNftDeployHash);
-
-  const deployUpdatedNftResult = await getDeployDetails(updatedNftDeployHash);
-  console.log('...... NFT Updated successfully', deployUpdatedNftResult);
-
-  return deployUpdatedNftResult;
-}
-
-export async function getMappedNfts() {
-  const nftsList = await getNFTsList();
-  nftsList.forEach((nft: any) => nft.isForSale === 'true');
-  const beneficiariesList = await getBeneficiariesList();
-  const campaignsList = await getCampaignsList();
-  const creatorsList = await getCreatorsList();
-  const collectionsList = await getCollectionsList();
-  const uniqueCollections = collectionsList.filter(
-    (collection: any, index: any, collections: any) =>
-      index ===
-      collections.findIndex((idx: any) => idx.name === collection.name)
-  );
-
-  const mappedNFTs = nftsList.map((nft: any) => ({
-    ...nft,
-    campaignName: campaignsList.find(({ id }: any) => nft.campaign === id).name,
-    creatorName: creatorsList.find(
-      ({ address }: any) => nft.creator === address
-    ).name,
-    beneficiaryName: beneficiariesList.find(
-      ({ address }: any) => nft.beneficiary === address
-    ).name,
-    collectionName: collectionsList.find(({ id }: any) => nft.collection === id)
-      .name,
-  }));
-
-  return {
-    mappedNFTs,
-    beneficiariesList,
-    campaignsList,
-    creatorsList,
-    collectionsList,
-    uniqueCollections,
-  };
-}
-
-export function getMappedNftsByList(
-  nftsList: any,
-  beneficiariesList: any,
-  campaignsList: any,
-  creatorsList: any,
-  collectionsList: any
-) {
-  const mappedList = nftsList.map((nft: any) => ({
-    ...nft,
-    campaignName: campaignsList.find(({ id }: any) => nft.campaign === id)
-      ?.name,
-    creatorName: creatorsList.find(
-      ({ address }: any) => nft.creator === address
-    )?.name,
-    beneficiaryName: beneficiariesList.find(
-      ({ address }: any) => nft.beneficiary === address
-    )?.username,
-    collectionName: collectionsList.find(({ id }: any) => nft.collection === id)
-      ?.name,
-  }));
-  return mappedList;
-}
-
-let list = getCreatorNftList("012e37ffd943f25cf1fa6f0fbb3bdca845cbc468b08a34f3d5752ae03ef5dd07a1");
-console.log(list)
+test();
